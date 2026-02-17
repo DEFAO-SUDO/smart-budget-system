@@ -1,0 +1,252 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Smart Budget Tracker</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    body {
+        font-family: 'Segoe UI', sans-serif;
+        margin: 0;
+        padding: 40px;
+        background: linear-gradient(135deg, #667eea, #764ba2);
+        min-height: 100vh;
+    }
+
+    h1 {
+        text-align: center;
+        color: white;
+        margin-bottom: 10px;
+    }
+
+    .logout {
+        text-align: right;
+        margin-bottom: 20px;
+    }
+
+    .logout a {
+        color: white;
+        text-decoration: none;
+        font-weight: bold;
+        background: #ff4b5c;
+        padding: 8px 15px;
+        border-radius: 8px;
+    }
+
+    .card {
+        background: white;
+        padding: 25px;
+        margin-bottom: 25px;
+        border-radius: 15px;
+        box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+    }
+
+    input, select, button {
+        padding: 10px;
+        margin: 8px 0;
+        width: 100%;
+        border-radius: 8px;
+        border: 1px solid #ddd;
+    }
+
+    button {
+        background: linear-gradient(90deg, #667eea, #764ba2);
+        color: white;
+        border: none;
+        font-weight: bold;
+        cursor: pointer;
+    }
+
+    .delete-btn {
+        background: red;
+    }
+
+    table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 15px;
+    }
+
+    th, td {
+        padding: 10px;
+        text-align: center;
+        border-bottom: 1px solid #eee;
+    }
+
+    th {
+        background: #f4f6f9;
+    }
+
+    .income { color: green; font-weight: bold; }
+    .expense { color: red; font-weight: bold; }
+    .balance { color: blue; font-weight: bold; }
+
+    canvas {
+        max-width: 500px;
+        margin: 20px auto;
+        display: block;
+    }
+</style>
+</head>
+
+<body>
+
+<h1>Smart Budget & Expense Tracker</h1>
+
+<div class="logout">
+    <a href="/logout">Logout</a>
+</div>
+
+<!-- ADD INCOME -->
+<div class="card">
+    <h2>Add Income</h2>
+    <form action="/add_income" method="POST">
+        <input type="text" name="source" placeholder="Income Source" required>
+        <input type="number" step="0.01" name="amount" placeholder="Amount" required>
+        <select name="month" required>
+            <option value="">Select Month</option>
+            <option>January</option>
+            <option>February</option>
+            <option>March</option>
+            <option>April</option>
+            <option>May</option>
+            <option>June</option>
+            <option>July</option>
+            <option>August</option>
+            <option>September</option>
+            <option>October</option>
+            <option>November</option>
+            <option>December</option>
+        </select>
+        <button type="submit">Add Income</button>
+    </form>
+</div>
+
+<!-- ADD EXPENSE -->
+<div class="card">
+    <h2>Add Expense</h2>
+    <form action="/add" method="POST">
+        <input type="text" name="title" placeholder="Expense Title" required>
+        <select name="category" required>
+            <option value="">Select Category</option>
+            <option>Food</option>
+            <option>Transport</option>
+            <option>Rent</option>
+            <option>Shopping</option>
+            <option>Bills</option>
+            <option>Entertainment</option>
+        </select>
+        <input type="number" step="0.01" name="amount" placeholder="Amount" required>
+        <select name="month" required>
+            <option value="">Select Month</option>
+            <option>January</option>
+            <option>February</option>
+            <option>March</option>
+            <option>April</option>
+            <option>May</option>
+            <option>June</option>
+            <option>July</option>
+            <option>August</option>
+            <option>September</option>
+            <option>October</option>
+            <option>November</option>
+            <option>December</option>
+        </select>
+        <button type="submit">Add Expense</button>
+    </form>
+</div>
+
+<!-- SUMMARY -->
+<div class="card">
+    <h2>Summary</h2>
+    <p class="income">Total Income: {{ total_income }}</p>
+    <p class="expense">Total Expenses: {{ total_expense }}</p>
+    <p class="balance">Balance: {{ balance }}</p>
+</div>
+
+<!-- INCOME LIST -->
+<div class="card">
+    <h2>Income List</h2>
+    <table>
+        <tr>
+            <th>Source</th>
+            <th>Amount</th>
+            <th>Month</th>
+            <th>Action</th>
+        </tr>
+        {% for income in incomes %}
+        <tr>
+            <td>{{ income[2] }}</td>
+            <td>{{ income[3] }}</td>
+            <td>{{ income[4] }}</td>
+            <td>
+                <a href="/delete_income/{{ income[0] }}">
+                    <button class="delete-btn">Delete</button>
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<!-- EXPENSE LIST -->
+<div class="card">
+    <h2>Expense List</h2>
+    <table>
+        <tr>
+            <th>Title</th>
+            <th>Category</th>
+            <th>Amount</th>
+            <th>Month</th>
+            <th>Action</th>
+        </tr>
+        {% for expense in expenses %}
+        <tr>
+            <td>{{ expense[2] }}</td>
+            <td>{{ expense[3] }}</td>
+            <td>{{ expense[4] }}</td>
+            <td>{{ expense[5] }}</td>
+            <td>
+                <a href="/delete_expense/{{ expense[0] }}">
+                    <button class="delete-btn">Delete</button>
+                </a>
+            </td>
+        </tr>
+        {% endfor %}
+    </table>
+</div>
+
+<!-- CHARTS -->
+<div class="card">
+    <h2>Charts</h2>
+    <canvas id="expenseChart"></canvas>
+    <canvas id="barChart"></canvas>
+</div>
+
+<script>
+    const categoryData = {{ category_data | safe }};
+
+    new Chart(document.getElementById('expenseChart'), {
+        type: 'pie',
+        data: {
+            labels: categoryData.labels,
+            datasets: [{
+                data: categoryData.values
+            }]
+        }
+    });
+
+    new Chart(document.getElementById('barChart'), {
+        type: 'bar',
+        data: {
+            labels: ['Income', 'Expense'],
+            datasets: [{
+                label: 'Amount',
+                data: [{{ total_income }}, {{ total_expense }}]
+            }]
+        }
+    });
+</script>
+
+</body>
+</html>
